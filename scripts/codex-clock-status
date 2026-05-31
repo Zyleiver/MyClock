@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+VALID_STATUSES = {
+    "running",
+    "waiting",
+    "waiting_for_user",
+    "blocked",
+    "completed",
+    "complete",
+    "done",
+    "unknown",
+}
+
+
+def main() -> int:
+    if len(sys.argv) < 2 or sys.argv[1] in {"-h", "--help"}:
+        print("Usage: scripts/codex-clock-status <status> [task text]")
+        print("Statuses: running, waiting, completed, blocked, unknown")
+        return 0
+
+    status = sys.argv[1].strip().lower()
+    if status not in VALID_STATUSES:
+        print(f"Unsupported status: {status}", file=sys.stderr)
+        return 2
+
+    task = " ".join(sys.argv[2:]).strip() or "Codex task"
+    directory = os.path.expanduser("~/.codex-clock")
+    os.makedirs(directory, exist_ok=True)
+
+    payload = {
+        "status": status,
+        "task": task,
+        "updatedAt": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+    }
+
+    target = os.path.join(directory, "status.json")
+    temp = f"{target}.tmp"
+    with open(temp, "w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+    os.replace(temp, target)
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
