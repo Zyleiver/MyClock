@@ -11,6 +11,7 @@
 - [x] Add repository-level Codex instructions for updating task status.
 - [x] Add smoke test coverage for build and status bridge.
 - [x] Add GitHub Actions CI for smoke tests.
+- [x] Add GitHub bootstrap script for repository creation, labels, milestone, and issues.
 
 ## Next
 

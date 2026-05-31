@@ -50,8 +50,18 @@ Target owner: `Zyleiver`
 
 Suggested repository name: `MyClock`
 
+With a GitHub token that can create repositories:
+
 ```bash
-git remote add origin https://github.com/Zyleiver/MyClock.git
+GITHUB_TOKEN=... scripts/github-bootstrap.py
+```
+
+This creates the repository, pushes `main`, and creates starter labels, milestone, and issues. See [GitHub management](docs/github-management.md).
+
+Manual fallback:
+
+```bash
+git remote set-url origin https://github.com/Zyleiver/MyClock.git
 git push -u origin main
 ```
 
