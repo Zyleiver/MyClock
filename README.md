@@ -36,6 +36,14 @@ scripts/codex-clock-status completed "MyClock MVP complete"
 
 Supported statuses are `running`, `waiting`, `waiting_for_user`, `blocked`, `completed`, `complete`, `done`, and `unknown`.
 
+See [Codex integration](docs/codex-integration.md) for the bridge schema and repository-level Codex behavior.
+
+## Verify
+
+```bash
+scripts/smoke-test.sh
+```
+
 ## GitHub
 
 Target owner: `Zyleiver`

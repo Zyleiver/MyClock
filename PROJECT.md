@@ -8,6 +8,8 @@
 - [x] Add a 5 minute break period.
 - [x] Show Codex task status from a local bridge file.
 - [x] Provide scripts for building the app and updating Codex status.
+- [x] Add repository-level Codex instructions for updating task status.
+- [x] Add smoke test coverage for build and status bridge.
 
 ## Next
 
@@ -16,3 +18,4 @@
 - [ ] Add session history export.
 - [ ] Replace file bridge with a direct Codex API if one becomes available.
 - [ ] Add a signed app release workflow.
+- [ ] Create `Zyleiver/MyClock` on GitHub and push `main`.
