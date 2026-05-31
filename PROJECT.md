@@ -10,6 +10,7 @@
 - [x] Provide scripts for building the app and updating Codex status.
 - [x] Add repository-level Codex instructions for updating task status.
 - [x] Add smoke test coverage for build and status bridge.
+- [x] Add GitHub Actions CI for smoke tests.
 
 ## Next
 
