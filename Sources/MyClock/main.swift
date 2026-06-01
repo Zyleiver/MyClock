@@ -277,7 +277,13 @@ private struct ContentView: View {
                 expandedBody
             }
         }
-        .background(model.phase == .idle ? .regularMaterial : .ultraThinMaterial)
+        .background {
+            if isTimerActive {
+                Color.clear
+            } else {
+                Rectangle().fill(.regularMaterial)
+            }
+        }
         .onAppear {
             configureWindow()
         }
@@ -286,7 +292,7 @@ private struct ContentView: View {
                 alwaysOnTop: newValue,
                 compact: isCompact,
                 compactGoalCount: model.goals.count,
-                translucent: model.phase != .idle
+                translucent: isTimerActive
             )
         }
         .onChange(of: isCompact) { newValue in
@@ -294,7 +300,7 @@ private struct ContentView: View {
                 alwaysOnTop: model.alwaysOnTop,
                 compact: newValue,
                 compactGoalCount: model.goals.count,
-                translucent: model.phase != .idle
+                translucent: isTimerActive
             )
         }
         .onChange(of: model.goal) { _ in
@@ -315,8 +321,24 @@ private struct ContentView: View {
             alwaysOnTop: model.alwaysOnTop,
             compact: isCompact,
             compactGoalCount: model.goals.count,
-            translucent: model.phase != .idle
+            translucent: isTimerActive
         )
+    }
+
+    private var isTimerActive: Bool {
+        model.phase != .idle
+    }
+
+    private var panelBackground: Color {
+        Color(nsColor: .controlBackgroundColor).opacity(isTimerActive ? 0.24 : 1.0)
+    }
+
+    private var completedGoalBackground: Color {
+        Color.green.opacity(isTimerActive ? 0.24 : 0.14)
+    }
+
+    private var editorBackground: Color {
+        Color(nsColor: .textBackgroundColor).opacity(isTimerActive ? 0.24 : 1.0)
     }
 
     private var expandedBody: some View {
@@ -390,7 +412,7 @@ private struct ContentView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(panelBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         } else {
             ScrollView(.vertical, showsIndicators: goals.count > 3) {
@@ -415,7 +437,7 @@ private struct ContentView: View {
                             .padding(.horizontal, 9)
                             .padding(.vertical, 6)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(isCompleted ? Color.green.opacity(0.14) : Color(nsColor: .controlBackgroundColor))
+                            .background(isCompleted ? completedGoalBackground : panelBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         }
                         .buttonStyle(.plain)
@@ -484,7 +506,7 @@ private struct ContentView: View {
                     .scrollContentBackground(.hidden)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(editorBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -572,7 +594,7 @@ private struct ContentView: View {
             }
         }
         .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
@@ -602,9 +624,11 @@ private final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotifica
             let compactHeight = CGFloat(78 + compactRows * 34)
             let size = compact ? NSSize(width: 340, height: compactHeight) : NSSize(width: 390, height: 620)
             window.level = alwaysOnTop ? .floating : .normal
-            window.alphaValue = translucent ? 0.68 : 1.0
+            window.alphaValue = translucent ? 0.52 : 1.0
             window.backgroundColor = .clear
             window.isOpaque = false
+            window.contentView?.wantsLayer = true
+            window.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             window.isMovableByWindowBackground = true
             window.title = "MyClock"
