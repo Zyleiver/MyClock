@@ -19,6 +19,7 @@
 - [x] Add clickable compact goal cells for marking goals complete.
 - [x] Add menu bar controls for show, hide, and quit.
 - [x] Add notification center alerts at session boundaries.
+- [x] Make active timer windows semi-transparent.
 
 ## Next
 

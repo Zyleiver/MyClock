@@ -281,7 +281,7 @@ private struct ContentView: View {
                 expandedBody
             }
         }
-        .background(.regularMaterial)
+        .background(model.phase == .idle ? .regularMaterial : .ultraThinMaterial)
         .onAppear {
             configureWindow()
         }
@@ -289,14 +289,16 @@ private struct ContentView: View {
             AppDelegate.configureWindows(
                 alwaysOnTop: newValue,
                 compact: isCompact,
-                compactGoalCount: model.goals.count
+                compactGoalCount: model.goals.count,
+                translucent: model.phase != .idle
             )
         }
         .onChange(of: isCompact) { newValue in
             AppDelegate.configureWindows(
                 alwaysOnTop: model.alwaysOnTop,
                 compact: newValue,
-                compactGoalCount: model.goals.count
+                compactGoalCount: model.goals.count,
+                translucent: model.phase != .idle
             )
         }
         .onChange(of: model.goal) { _ in
@@ -308,6 +310,7 @@ private struct ContentView: View {
             } else if newValue == .idle {
                 isCompact = false
             }
+            configureWindow()
         }
     }
 
@@ -315,7 +318,8 @@ private struct ContentView: View {
         AppDelegate.configureWindows(
             alwaysOnTop: model.alwaysOnTop,
             compact: isCompact,
-            compactGoalCount: model.goals.count
+            compactGoalCount: model.goals.count,
+            translucent: model.phase != .idle
         )
     }
 
@@ -587,16 +591,24 @@ private final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotifica
         setupStatusItem()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            Self.configureWindows(alwaysOnTop: true, compact: false)
+            Self.configureWindows(alwaysOnTop: true, compact: false, translucent: false)
         }
     }
 
-    static func configureWindows(alwaysOnTop: Bool, compact: Bool, compactGoalCount: Int = 0) {
+    static func configureWindows(
+        alwaysOnTop: Bool,
+        compact: Bool,
+        compactGoalCount: Int = 0,
+        translucent: Bool = false
+    ) {
         for window in NSApplication.shared.windows {
             let compactRows = min(max(compactGoalCount, 1), 3)
             let compactHeight = CGFloat(78 + compactRows * 34)
             let size = compact ? NSSize(width: 340, height: compactHeight) : NSSize(width: 390, height: 620)
             window.level = alwaysOnTop ? .floating : .normal
+            window.alphaValue = translucent ? 0.68 : 1.0
+            window.backgroundColor = .clear
+            window.isOpaque = false
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             window.isMovableByWindowBackground = true
             window.title = "MyClock"
