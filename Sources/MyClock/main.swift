@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import UserNotifications
 
 private enum PomodoroMode: String {
     case work = "Work"
@@ -25,8 +26,33 @@ private struct CodexTaskStatus: Codable, Equatable {
     )
 }
 
+private final class NotificationManager {
+    static let shared = NotificationManager()
+
+    private init() {}
+
+    func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func send(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+}
+
 private final class ClockViewModel: ObservableObject {
     @Published var goal = ""
+    @Published var completedGoalIndexes: Set<Int> = []
     @Published var mode: PomodoroMode = .work
     @Published var phase: TimerPhase = .idle
     @Published var remainingSeconds = 25 * 60
@@ -119,14 +145,6 @@ private final class ClockViewModel: ObservableObject {
             .filter { !$0.isEmpty }
     }
 
-    var compactGoalText: String {
-        guard let firstGoal = goals.first else { return "No goal" }
-        if goals.count == 1 {
-            return firstGoal
-        }
-        return "\(firstGoal)  +\(goals.count - 1)"
-    }
-
     func performPrimaryAction() {
         switch phase {
         case .idle:
@@ -144,6 +162,7 @@ private final class ClockViewModel: ObservableObject {
         phase = .idle
         remainingSeconds = workSeconds
         validationMessage = ""
+        completedGoalIndexes = []
     }
 
     func skip() {
@@ -155,9 +174,18 @@ private final class ClockViewModel: ObservableObject {
             mode = .work
             remainingSeconds = workSeconds
             goal = ""
+            completedGoalIndexes = []
         }
         phase = .idle
         validationMessage = ""
+    }
+
+    func toggleGoalCompletion(at index: Int) {
+        if completedGoalIndexes.contains(index) {
+            completedGoalIndexes.remove(index)
+        } else {
+            completedGoalIndexes.insert(index)
+        }
     }
 
     private func start() {
@@ -167,6 +195,7 @@ private final class ClockViewModel: ObservableObject {
         }
 
         validationMessage = ""
+        completedGoalIndexes = []
         phase = .running
         startTicker()
     }
@@ -209,15 +238,24 @@ private final class ClockViewModel: ObservableObject {
         NSSound.beep()
 
         if mode == .work {
+            NotificationManager.shared.send(
+                title: "Focus complete",
+                body: "Time for a 5 minute break."
+            )
             mode = .rest
             remainingSeconds = restSeconds
             phase = .running
             startTicker()
         } else {
+            NotificationManager.shared.send(
+                title: "Break complete",
+                body: "Ready for the next focus session."
+            )
             mode = .work
             remainingSeconds = workSeconds
             phase = .idle
             goal = ""
+            completedGoalIndexes = []
         }
     }
 
@@ -245,13 +283,24 @@ private struct ContentView: View {
         }
         .background(.regularMaterial)
         .onAppear {
-            AppDelegate.configureWindows(alwaysOnTop: model.alwaysOnTop, compact: isCompact)
+            configureWindow()
         }
         .onChange(of: model.alwaysOnTop) { newValue in
-            AppDelegate.configureWindows(alwaysOnTop: newValue, compact: isCompact)
+            AppDelegate.configureWindows(
+                alwaysOnTop: newValue,
+                compact: isCompact,
+                compactGoalCount: model.goals.count
+            )
         }
         .onChange(of: isCompact) { newValue in
-            AppDelegate.configureWindows(alwaysOnTop: model.alwaysOnTop, compact: newValue)
+            AppDelegate.configureWindows(
+                alwaysOnTop: model.alwaysOnTop,
+                compact: newValue,
+                compactGoalCount: model.goals.count
+            )
+        }
+        .onChange(of: model.goal) { _ in
+            configureWindow()
         }
         .onChange(of: model.phase) { newValue in
             if newValue == .running {
@@ -260,6 +309,14 @@ private struct ContentView: View {
                 isCompact = false
             }
         }
+    }
+
+    private func configureWindow() {
+        AppDelegate.configureWindows(
+            alwaysOnTop: model.alwaysOnTop,
+            compact: isCompact,
+            compactGoalCount: model.goals.count
+        )
     }
 
     private var expandedBody: some View {
@@ -275,16 +332,15 @@ private struct ContentView: View {
     }
 
     private var compactBody: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
                 Text(model.timeText)
                     .font(.system(size: 30, weight: .medium, design: .monospaced))
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(model.compactGoalText)
-                    .font(.caption)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+
+                Spacer(minLength: 4)
+
                 HStack(spacing: 6) {
                     Circle()
                         .fill(model.statusColor)
@@ -296,31 +352,79 @@ private struct ContentView: View {
                         .foregroundStyle(model.statusColor)
                         .lineLimit(1)
                 }
+
+                Button {
+                    model.performPrimaryAction()
+                } label: {
+                    Image(systemName: model.primaryActionIcon)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.borderless)
+                .help(model.primaryActionTitle)
+
+                Button {
+                    isCompact = false
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.borderless)
+                .help("Expand")
             }
 
-            Spacer(minLength: 4)
-
-            Button {
-                model.performPrimaryAction()
-            } label: {
-                Image(systemName: model.primaryActionIcon)
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.borderless)
-            .help(model.primaryActionTitle)
-
-            Button {
-                isCompact = false
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.borderless)
-            .help("Expand")
+            compactGoalCells
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(width: 300)
+        .frame(width: 340)
+    }
+
+    @ViewBuilder
+    private var compactGoalCells: some View {
+        let goals = Array(model.goals.enumerated())
+
+        if goals.isEmpty {
+            Text("No goal")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        } else {
+            ScrollView(.vertical, showsIndicators: goals.count > 3) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(goals, id: \.offset) { index, goal in
+                        let isCompleted = model.completedGoalIndexes.contains(index)
+
+                        Button {
+                            model.toggleGoalCompletion(at: index)
+                        } label: {
+                            HStack(spacing: 7) {
+                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(isCompleted ? Color.green : Color.secondary)
+                                    .frame(width: 14, height: 14)
+                                Text(goal)
+                                    .font(.caption)
+                                    .foregroundStyle(isCompleted ? .secondary : .primary)
+                                    .strikethrough(isCompleted)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(isCompleted ? Color.green.opacity(0.14) : Color(nsColor: .controlBackgroundColor))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .help(isCompleted ? "Mark goal as active" : "Mark goal complete")
+                    }
+                }
+            }
+            .frame(maxHeight: 102)
+        }
     }
 
     private var header: some View {
@@ -473,17 +577,25 @@ private struct ContentView: View {
     }
 }
 
-private final class AppDelegate: NSObject, NSApplicationDelegate {
+private final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    private var statusItem: NSStatusItem?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        UNUserNotificationCenter.current().delegate = self
+        NotificationManager.shared.requestAuthorization()
+        setupStatusItem()
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             Self.configureWindows(alwaysOnTop: true, compact: false)
         }
     }
 
-    static func configureWindows(alwaysOnTop: Bool, compact: Bool) {
+    static func configureWindows(alwaysOnTop: Bool, compact: Bool, compactGoalCount: Int = 0) {
         for window in NSApplication.shared.windows {
-            let size = compact ? NSSize(width: 300, height: 92) : NSSize(width: 390, height: 620)
+            let compactRows = min(max(compactGoalCount, 1), 3)
+            let compactHeight = CGFloat(78 + compactRows * 34)
+            let size = compact ? NSSize(width: 340, height: compactHeight) : NSSize(width: 390, height: 620)
             window.level = alwaysOnTop ? .floating : .normal
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             window.isMovableByWindowBackground = true
@@ -491,6 +603,53 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = size
             window.setContentSize(size)
         }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    private func setupStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = item.button {
+            button.image = NSImage(systemSymbolName: "timer", accessibilityDescription: "MyClock")
+            button.image?.isTemplate = true
+        }
+
+        let menu = NSMenu()
+        menu.addItem(menuItem(title: "Show MyClock", action: #selector(showMainWindow)))
+        menu.addItem(menuItem(title: "Hide Window", action: #selector(hideMainWindow)))
+        menu.addItem(.separator())
+        menu.addItem(menuItem(title: "Quit MyClock", action: #selector(quitMyClock)))
+        item.menu = menu
+        statusItem = item
+    }
+
+    private func menuItem(title: String, action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    @objc private func showMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        for window in NSApplication.shared.windows {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    @objc private func hideMainWindow() {
+        for window in NSApplication.shared.windows {
+            window.orderOut(nil)
+        }
+    }
+
+    @objc private func quitMyClock() {
+        NSApp.terminate(nil)
     }
 }
 

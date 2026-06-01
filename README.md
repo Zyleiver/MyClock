@@ -6,8 +6,10 @@ A small macOS Pomodoro clock that stays above other windows, requires a work goa
 
 - 25 minute work timer and 5 minute break timer.
 - Floating macOS window with a pin toggle for always-on-top behavior.
-- Compact mode that automatically appears after the focus timer starts and keeps the current goal visible.
+- Compact mode that automatically appears after the focus timer starts and shows goal cells that can be marked complete.
 - Multi-line work goal validation before the focus timer starts.
+- Menu bar controls for showing, hiding, and quitting MyClock.
+- macOS notification alerts when focus or break periods finish.
 - Codex task status panel reading from `~/.codex-clock/status.json`.
 - Helper command for Codex or shell scripts to publish status updates.
 

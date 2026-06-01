@@ -16,11 +16,12 @@
 - [x] Create GitHub issues for post-MVP project management.
 - [x] Add compact mode after the timer starts.
 - [x] Support multiple line-separated goals and show them in compact mode.
+- [x] Add clickable compact goal cells for marking goals complete.
+- [x] Add menu bar controls for show, hide, and quit.
+- [x] Add notification center alerts at session boundaries.
 
 ## Next
 
-- [ ] Add menu bar mode.
-- [ ] Add notification center alerts at session boundaries.
 - [ ] Add session history export.
 - [ ] Replace file bridge with a direct Codex API if one becomes available.
 - [ ] Add a signed app release workflow.
