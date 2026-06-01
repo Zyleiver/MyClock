@@ -112,6 +112,21 @@ private final class ClockViewModel: ObservableObject {
         }
     }
 
+    var goals: [String] {
+        goal
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    var compactGoalText: String {
+        guard let firstGoal = goals.first else { return "No goal" }
+        if goals.count == 1 {
+            return firstGoal
+        }
+        return "\(firstGoal)  +\(goals.count - 1)"
+    }
+
     func performPrimaryAction() {
         switch phase {
         case .idle:
@@ -261,10 +276,14 @@ private struct ContentView: View {
 
     private var compactBody: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(model.timeText)
                     .font(.system(size: 30, weight: .medium, design: .monospaced))
                     .monospacedDigit()
+                    .lineLimit(1)
+                Text(model.compactGoalText)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     Circle()
@@ -301,7 +320,7 @@ private struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(width: 260)
+        .frame(width: 300)
     }
 
     private var header: some View {
@@ -355,9 +374,33 @@ private struct ContentView: View {
 
     private var goalEditor: some View {
         VStack(alignment: .leading, spacing: 6) {
-            TextField("Work goal", text: $model.goal)
-                .textFieldStyle(.roundedBorder)
-                .disabled(model.mode == .work && model.phase == .running)
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $model.goal)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.secondary.opacity(0.24), lineWidth: 1)
+                    )
+                    .disabled(model.mode == .work && model.phase == .running)
+
+                if model.goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Work goals, one per line")
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(height: 86)
+
+            Text("One line per goal.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             if !model.validationMessage.isEmpty {
                 Text(model.validationMessage)
@@ -440,7 +483,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
     static func configureWindows(alwaysOnTop: Bool, compact: Bool) {
         for window in NSApplication.shared.windows {
-            let size = compact ? NSSize(width: 260, height: 74) : NSSize(width: 390, height: 560)
+            let size = compact ? NSSize(width: 300, height: 92) : NSSize(width: 390, height: 620)
             window.level = alwaysOnTop ? .floating : .normal
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             window.isMovableByWindowBackground = true

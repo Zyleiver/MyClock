@@ -15,6 +15,7 @@
 - [x] Create `Zyleiver/MyClock` on GitHub and push `main`.
 - [x] Create GitHub issues for post-MVP project management.
 - [x] Add compact mode after the timer starts.
+- [x] Support multiple line-separated goals and show them in compact mode.
 
 ## Next
 
