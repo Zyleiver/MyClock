@@ -173,8 +173,6 @@ private final class ClockViewModel: ObservableObject {
         } else {
             mode = .work
             remainingSeconds = workSeconds
-            goal = ""
-            completedGoalIndexes = []
         }
         phase = .idle
         validationMessage = ""
@@ -254,8 +252,6 @@ private final class ClockViewModel: ObservableObject {
             mode = .work
             remainingSeconds = workSeconds
             phase = .idle
-            goal = ""
-            completedGoalIndexes = []
         }
     }
 

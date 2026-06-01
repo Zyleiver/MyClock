@@ -20,6 +20,7 @@
 - [x] Add menu bar controls for show, hide, and quit.
 - [x] Add notification center alerts at session boundaries.
 - [x] Make active timer windows semi-transparent.
+- [x] Preserve work goals after timer completion.
 
 ## Next
 
