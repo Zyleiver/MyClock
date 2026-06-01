@@ -218,8 +218,36 @@ private final class ClockViewModel: ObservableObject {
 
 private struct ContentView: View {
     @StateObject private var model = ClockViewModel()
+    @State private var isCompact = false
 
     var body: some View {
+        Group {
+            if isCompact {
+                compactBody
+            } else {
+                expandedBody
+            }
+        }
+        .background(.regularMaterial)
+        .onAppear {
+            AppDelegate.configureWindows(alwaysOnTop: model.alwaysOnTop, compact: isCompact)
+        }
+        .onChange(of: model.alwaysOnTop) { newValue in
+            AppDelegate.configureWindows(alwaysOnTop: newValue, compact: isCompact)
+        }
+        .onChange(of: isCompact) { newValue in
+            AppDelegate.configureWindows(alwaysOnTop: model.alwaysOnTop, compact: newValue)
+        }
+        .onChange(of: model.phase) { newValue in
+            if newValue == .running {
+                isCompact = true
+            } else if newValue == .idle {
+                isCompact = false
+            }
+        }
+    }
+
+    private var expandedBody: some View {
         VStack(spacing: 18) {
             header
             timerFace
@@ -229,13 +257,51 @@ private struct ContentView: View {
         }
         .padding(22)
         .frame(width: 390)
-        .background(.regularMaterial)
-        .onAppear {
-            AppDelegate.configureWindows(alwaysOnTop: model.alwaysOnTop)
+    }
+
+    private var compactBody: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.timeText)
+                    .font(.system(size: 30, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(model.statusColor)
+                        .frame(width: 7, height: 7)
+                    Text(model.mode.rawValue)
+                        .font(.caption)
+                    Text(model.normalizedStatusText)
+                        .font(.caption)
+                        .foregroundStyle(model.statusColor)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                model.performPrimaryAction()
+            } label: {
+                Image(systemName: model.primaryActionIcon)
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.borderless)
+            .help(model.primaryActionTitle)
+
+            Button {
+                isCompact = false
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.borderless)
+            .help("Expand")
         }
-        .onChange(of: model.alwaysOnTop) { newValue in
-            AppDelegate.configureWindows(alwaysOnTop: newValue)
-        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(width: 260)
     }
 
     private var header: some View {
@@ -255,6 +321,13 @@ private struct ContentView: View {
             }
             .toggleStyle(.button)
             .help("Keep window above other apps")
+
+            Button {
+                isCompact = true
+            } label: {
+                Image(systemName: "arrow.down.right.and.arrow.up.left")
+            }
+            .help("Compact mode")
         }
     }
 
@@ -361,17 +434,19 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            Self.configureWindows(alwaysOnTop: true)
+            Self.configureWindows(alwaysOnTop: true, compact: false)
         }
     }
 
-    static func configureWindows(alwaysOnTop: Bool) {
+    static func configureWindows(alwaysOnTop: Bool, compact: Bool) {
         for window in NSApplication.shared.windows {
+            let size = compact ? NSSize(width: 260, height: 74) : NSSize(width: 390, height: 560)
             window.level = alwaysOnTop ? .floating : .normal
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             window.isMovableByWindowBackground = true
             window.title = "MyClock"
-            window.minSize = NSSize(width: 390, height: 560)
+            window.minSize = size
+            window.setContentSize(size)
         }
     }
 }

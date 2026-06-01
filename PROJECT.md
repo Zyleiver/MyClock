@@ -14,6 +14,7 @@
 - [x] Add GitHub bootstrap script for repository creation, labels, milestone, and issues.
 - [x] Create `Zyleiver/MyClock` on GitHub and push `main`.
 - [x] Create GitHub issues for post-MVP project management.
+- [x] Add compact mode after the timer starts.
 
 ## Next
 
